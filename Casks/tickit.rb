@@ -9,9 +9,21 @@ cask "tickit" do
   desc "Two-way sync between Apple Reminders and GitHub Issues"
   homepage "https://github.com/Ctrl-Ahsan/tickit"
 
+  # The default github_latest strategy reads the tag, which carries the version
+  # and not the build, so it reports 0.1.0 against a cask version of 0.1.0,30
+  # and every check looks like a mismatch. The build number only exists in the
+  # asset filename, so the release's assets are what get read here.
   livecheck do
     url :url
-    strategy :github_latest
+    regex(/Tickit[._-]v?(\d+(?:\.\d+)+)[._-](\d+)\.zip/i)
+    strategy :github_latest do |json, regex|
+      json["assets"]&.map do |asset|
+        match = asset["name"]&.match(regex)
+        next if match.blank?
+
+        "#{match[1]},#{match[2]}"
+      end
+    end
   end
 
   depends_on macos: :sonoma
